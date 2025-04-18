@@ -1,0 +1,12 @@
+[build]
+# 指定编译目标为riscv64gc-unknown-none-elf
+target = "riscv64gc-unknown-none-elf"
+
+[target.riscv64gc-unknown-none-elf]
+# 为riscv64gc-unknown-none-elf目标指定rustflags
+rustflags = [
+     # 指定链接器脚本路径
+     "-Clink-arg=-Tsrc/linker.ld", 
+     # 强制生成frame指针
+     "-Cforce-frame-pointers=yes"
+ ]
