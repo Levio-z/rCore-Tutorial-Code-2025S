@@ -101,13 +101,16 @@ impl PageTable {
         let mut ppn = self.root_ppn;
         let mut result: Option<&mut PageTableEntry> = None;
         for (i, idx) in idxs.iter().enumerate() {
+            // 返回内存区域上一个静态指针作为的页表项 64位的一个东西
             let pte = &mut ppn.get_pte_array()[*idx];
             if i == 2 {
                 result = Some(pte);
                 break;
             }
             if !pte.is_valid() {
+                // 使用物理内存分配器分配一个物理usize地址,转换成物理页号返回
                 let frame = frame_alloc().unwrap();
+                // 修改pte这个数据结构的内容
                 *pte = PageTableEntry::new(frame.ppn, PTEFlags::V);
                 self.frames.push(frame);
             }

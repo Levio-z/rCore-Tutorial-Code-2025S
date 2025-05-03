@@ -64,7 +64,11 @@ impl MemorySet {
         );
     }
     fn push(&mut self, mut map_area: MapArea, data: Option<&[u8]>) {
+        // 根据map_area上的虚拟页号，分配一个新的PPN和其映射
+        // 虚拟页号和FrameTracker对应起来，存入到多级页表中
+        // 修改 data_frames中的数据
         map_area.map(&mut self.page_table);
+        // 可选的放入数据到页表中
         if let Some(data) = data {
             map_area.copy_data(&mut self.page_table, data);
         }
@@ -339,7 +343,7 @@ impl MapArea {
     pub fn copy_data(&mut self, page_table: &mut PageTable, data: &[u8]) {
         assert_eq!(self.map_type, MapType::Framed);
         let mut start: usize = 0;
-        let mut current_vpn = self.vpn_range.get_start();
+        let mut current_vpn: VirtPageNum = self.vpn_range.get_start();
         let len = data.len();
         loop {
             let src = &data[start..len.min(start + PAGE_SIZE)];
