@@ -239,17 +239,22 @@ impl DiskInode {
     /// We will clear the block contents to zero later.
     pub fn clear_size(&mut self, block_device: &Arc<dyn BlockDevice>) -> Vec<u32> {
         let mut v: Vec<u32> = Vec::new();
-        let mut data_blocks = self.data_blocks() as usize;
+        // 找到块的大小，根据usize
+        let mut data_blocks: usize = self.data_blocks() as usize;
+        // 大小变为0
         self.size = 0;
         let mut current_blocks = 0usize;
         // direct
         while current_blocks < data_blocks.min(INODE_DIRECT_COUNT) {
+            // 直接索引的block
             v.push(self.direct[current_blocks]);
+            // 存储索引的节点变为0
             self.direct[current_blocks] = 0;
             current_blocks += 1;
         }
         // indirect1 block
         if data_blocks > INODE_DIRECT_COUNT {
+            // 存放数据索引的节点放进去
             v.push(self.indirect1);
             data_blocks -= INODE_DIRECT_COUNT;
             current_blocks = 0;
@@ -261,6 +266,7 @@ impl DiskInode {
             .lock()
             .modify(0, |indirect1: &mut IndirectBlock| {
                 while current_blocks < data_blocks.min(INODE_INDIRECT1_COUNT) {
+                    // 访问内容将存放数据节点放进去
                     v.push(indirect1[current_blocks]);
                     //indirect1[current_blocks] = 0;
                     current_blocks += 1;

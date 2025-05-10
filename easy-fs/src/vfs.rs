@@ -31,8 +31,10 @@ impl Inode {
     }
     /// Call a function over a disk inode to read it
     fn read_disk_inode<V>(&self, f: impl FnOnce(&DiskInode) -> V) -> V {
+        // 根据inode的block_id获取BlockCache数据
         get_block_cache(self.block_id, Arc::clone(&self.block_device))
             .lock()
+            // 返回BlockCache根据块偏移读取构造V返回
             .read(self.block_offset, f)
     }
     /// Call a function over a disk inode to modify it
@@ -60,7 +62,10 @@ impl Inode {
     }
     /// Find inode under current inode by name
     pub fn find(&self, name: &str) -> Option<Arc<Inode>> {
+        // 获取文件管理器对象，
         let fs = self.fs.lock();
+        // 通过块和块偏移读数据
+        // f：(&DiskInode)->Inode
         self.read_disk_inode(|disk_inode| {
             self.find_inode_id(name, disk_inode).map(|inode_id| {
                 let (block_id, block_offset) = fs.get_disk_inode_pos(inode_id);
@@ -104,9 +109,12 @@ impl Inode {
         }
         // create a new file
         // alloc a inode with an indirect block
+        // 1.修改位图分配了一个新的node
         let new_inode_id = fs.alloc_inode();
         // initialize inode
+        //2. 根据new_inode_id->new_inode_block_id和new_inode_block_offset->修改操作
         let (new_inode_block_id, new_inode_block_offset) = fs.get_disk_inode_pos(new_inode_id);
+        // 根据new_inode_id找到new_inode_block_id和new_inode_block_offset
         get_block_cache(new_inode_block_id as usize, Arc::clone(&self.block_device))
             .lock()
             .modify(new_inode_block_offset, |new_inode: &mut DiskInode| {
@@ -126,8 +134,9 @@ impl Inode {
                 &self.block_device,
             );
         });
-
+        // 返回对象主要需要block_id和block_offset
         let (block_id, block_offset) = fs.get_disk_inode_pos(new_inode_id);
+        // 写到磁盘上
         block_cache_sync_all();
         // return inode
         Some(Arc::new(Self::new(
@@ -140,7 +149,7 @@ impl Inode {
     }
     /// List inodes under current inode
     pub fn ls(&self) -> Vec<String> {
-        let _fs = self.fs.lock();
+        let _fs: MutexGuard<'_, EasyFileSystem> = self.fs.lock();
         self.read_disk_inode(|disk_inode| {
             let file_count = (disk_inode.size as usize) / DIRENT_SZ;
             let mut v: Vec<String> = Vec::new();
@@ -173,7 +182,8 @@ impl Inode {
     /// Clear the data in current inode
     pub fn clear(&self) {
         let mut fs = self.fs.lock();
-        self.modify_disk_inode(|disk_inode| {
+        // 根据id去找到modify_disk_inode
+        self.modify_disk_inode(|disk_inode: &mut DiskInode| {
             let size = disk_inode.size;
             let data_blocks_dealloc = disk_inode.clear_size(&self.block_device);
             assert!(data_blocks_dealloc.len() == DiskInode::total_blocks(size) as usize);

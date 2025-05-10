@@ -28,10 +28,13 @@ impl EasyFileSystem {
     ) -> Arc<Mutex<Self>> {
         // calculate block size of areas & create bitmaps
         let inode_bitmap = Bitmap::new(1, inode_bitmap_blocks as usize);
+        // 块乘8 计算出最多包含多少位，多少位就是对应的块
         let inode_num = inode_bitmap.maximum();
+        //  inode 区域
         let inode_area_blocks =
             ((inode_num * core::mem::size_of::<DiskInode>() + BLOCK_SZ - 1) / BLOCK_SZ) as u32;
         let inode_total_blocks = inode_bitmap_blocks + inode_area_blocks;
+        // 数据块数量等于所有块数量减去1减去节点块数量inode_total_blocks
         let data_total_blocks = total_blocks - 1 - inode_total_blocks;
         let data_bitmap_blocks = (data_total_blocks + 4096) / 4097;
         let data_area_blocks = data_total_blocks - data_bitmap_blocks;
@@ -135,7 +138,7 @@ impl EasyFileSystem {
         self.data_bitmap.alloc(&self.block_device).unwrap() as u32 + self.data_area_start_block
     }
     /// Deallocate a data block
-    pub fn dealloc_data(&mut self, block_id: u32) {
+    pub fn  dealloc_data(&mut self, block_id: u32) {
         get_block_cache(block_id as usize, Arc::clone(&self.block_device))
             .lock()
             .modify(0, |data_block: &mut DataBlock| {

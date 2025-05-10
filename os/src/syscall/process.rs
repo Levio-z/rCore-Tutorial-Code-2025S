@@ -55,7 +55,7 @@ pub fn sys_exec(path: *const u8) -> isize {
     let token = current_user_token();
     let path = translated_str(token, path);
     if let Some(app_inode) = open_file(path.as_str(), OpenFlags::RDONLY) {
-        let all_data = app_inode.read_all();
+        let all_data: alloc::vec::Vec<u8> = app_inode.read_all();
         let task = current_task().unwrap();
         task.exec(all_data.as_slice());
         0
